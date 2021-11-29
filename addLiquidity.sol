@@ -825,20 +825,12 @@ contract addLiquidity is Ownable {
   
      address public  caplUsdcPair;
     
-     bool inSwapAndLiquify;
-    bool public swapAndLiquifyEnabled = false; // Disable by default
-    
-     modifier lockTheSwap {
-        inSwapAndLiquify = true;
-        _;
-        inSwapAndLiquify = false;
-    }
 constructor(address _capl, address _usdc, address _pair) public {
     capl = (_capl);
     usdc = (_usdc);
   (caplUsdcPair) = (_pair);
 
-        IUniswapV2Router02 _uniswapV2Router =
+        uniswapV2Router =
        IUniswapV2Router02(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
        
             
@@ -846,31 +838,34 @@ constructor(address _capl, address _usdc, address _pair) public {
         (address token0) = (IUniswapV2Pair(caplUsdcPair).token0());
         _index = capl == token0 ? 0 : 1;
 
-        // set the rest of the contract variables
-        uniswapV2Router = _uniswapV2Router;
+
 }
 
       function addLiquidityCapl(uint256 tokenAmount, uint256 duration) external returns( uint256 _amountA , uint256 _amountB ,uint256 _amounts){
         IERC20(capl).transferFrom(msg.sender, address(this),tokenAmount) ; 
-       uint256 amount =  swapCaplForUSDC(tokenAmount.div(2), address(this), duration);
-        (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(capl,usdc, tokenAmount.div(2), 
-        amount, msg.sender, duration);
+        uint256 amount = swapTokens(capl, usdc,tokenAmount.div(2), address(this), duration);
+        (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(capl,usdc, tokenAmount.div(2), amount,
+        msg.sender, duration);
         return(amountA, amountB, amounts);
       }
       
        function addLiquidityUsdc(uint256 tokenAmount, uint256 duration) external returns(uint256 _amountA , uint256 _amountB ,uint256 _amounts){
         IERC20(usdc).transferFrom(msg.sender, address(this),tokenAmount) ; 
-        uint256 amount = swapUsdcForCapl(tokenAmount.div(2), address(this), duration);
-         (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(usdc,capl, tokenAmount.div(2), 
-        amount, msg.sender, duration);
+         uint256 amount =  swapTokens(usdc, capl, tokenAmount.div(2), address(this), duration);
+         (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(usdc,capl, tokenAmount.div(2), amount,
+        msg.sender, duration);
          return(amountA, amountB, amounts);
       }
       
-      function addLiquidityBoth(uint256 tokenAmountcapl, uint256 tokenAmountUsdc, uint256 duration) external returns(uint256 _amountA , uint256 _amountB ,uint256 _amounts){
+      function addLiquidityBoth(uint256 tokenAmountcapl, uint256 duration) external returns(uint256 _amountA , uint256 _amountB ,uint256 _amounts){
            IERC20(capl).transferFrom(msg.sender, address(this),tokenAmountcapl) ; 
-        IERC20(usdc).transferFrom(msg.sender, address(this),tokenAmountUsdc) ; 
-         (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(usdc,capl, tokenAmountUsdc, 
-        tokenAmountcapl, msg.sender, duration);
+            address[] memory path = new address[](2);
+        path[0] = capl;
+        path[1] = usdc;
+        uint[] memory amountOfTokens = uniswapV2Router.getAmountsOut(tokenAmountcapl, path);
+          uint256 bAmount = amountOfTokens[1];
+        IERC20(usdc).transferFrom(msg.sender, address(this),bAmount) ; 
+         (uint256 amountA , uint256 amountB ,uint256 amounts) = addLiq(capl,usdc, tokenAmountcapl, bAmount, msg.sender, duration);
          return(amountA, amountB, amounts);
       }
 
@@ -881,22 +876,17 @@ constructor(address _capl, address _usdc, address _pair) public {
     
     
     
-    function getUSDCAmount(uint256 tokenAmount) external view returns(uint256){
-         (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(caplUsdcPair).getReserves();
-      uint256 price = _index == 0? uniswapV2Router.getAmountOut(tokenAmount, reserve0, reserve1):
-      uniswapV2Router.getAmountOut(tokenAmount, reserve1, reserve0);
-       return(price);
+    function getOutputAmount(address aToken, address bToken, uint256 aAmount) public view returns(uint256){
+        address[] memory path = new address[](2);
+        path[0] = aToken;
+        path[1] = bToken;
+        uint[] memory amountOfTokens = uniswapV2Router.getAmountsOut(aAmount, path);
+          uint256 bAmount = amountOfTokens[1];
+          return(bAmount);
        
     }
     
-     function getCaplAmount(uint256 tokenAmount) external view returns(uint256){
-         (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(caplUsdcPair).getReserves();
 
-       uint256 price = _index == 0? uniswapV2Router.getAmountOut(tokenAmount, reserve1, reserve0):
-      uniswapV2Router.getAmountOut(tokenAmount, reserve0, reserve1);
-       return(price);
-       
-    }
     
     function addLiq(address aToken, address bToken, uint256 aAmount, uint256 bAmount, address sender, uint256 duration)internal returns (uint256 a, uint256 b, uint256 lpAmount){
           IERC20(aToken).approve(address(uniswapV2Router), aAmount);
@@ -919,15 +909,15 @@ constructor(address _capl, address _usdc, address _pair) public {
 
      
     
-      function swapCaplForUSDC(uint256 tokenAmount, address sender, uint256 duration) internal returns(uint256 amount){
-        IERC20(capl).approve(address(uniswapV2Router), tokenAmount);
-
+      function swapTokens(address tokenIn, address tokenOut, uint256 tokenAmount, address sender, uint256 duration) internal returns(uint256 amount){
+        IERC20(tokenIn).approve(address(uniswapV2Router), tokenAmount);
         address[] memory path = new address[](2);
-        path[0] =capl;
-        path[1] = usdc;
+        path[0] =tokenIn;
+        path[1] = tokenOut;
+        uint[] memory amountOfTokens = uniswapV2Router.getAmountsOut(tokenAmount, path);
         uint256[] memory amounts = uniswapV2Router.swapExactTokensForTokens(
             tokenAmount,
-            tokenAmount.mul(slippageTolerance).div(1000), 
+            amountOfTokens[1].mul(slippageTolerance).div(1000), 
             path,
             sender,
             block.timestamp + duration
@@ -939,24 +929,6 @@ constructor(address _capl, address _usdc, address _pair) public {
          slippageTolerance = slippage;
      }
      
-
-      function swapUsdcForCapl(uint256 tokenAmount, address sender, uint256 duration)  internal returns(uint256){
-        IERC20(usdc).approve(address(uniswapV2Router), tokenAmount);
-
-        address[] memory path = new address[](2);
-        path[0] =usdc;
-        path[1] = capl;
-        uint256[] memory amounts = uniswapV2Router.swapExactTokensForTokens(
-            tokenAmount,
-           tokenAmount.mul(slippageTolerance).div(1000),
-            path,
-            sender,
-             block.timestamp + duration
-        );
-        
-        return(amounts[1]);
-    }
-
       function inCaseTokensGetStuck(
         address _token,
         uint256 _amount,
