@@ -889,7 +889,9 @@ constructor(address _capl, address _usdc, address _pair) public {
 
     
     function addLiq(address aToken, address bToken, uint256 aAmount, uint256 bAmount, address sender, uint256 duration)internal returns (uint256 a, uint256 b, uint256 lpAmount){
+          IERC20(aToken).approve(address(uniswapV2Router), 0);
           IERC20(aToken).approve(address(uniswapV2Router), aAmount);
+           IERC20(bToken).approve(address(uniswapV2Router), 0);
           IERC20(bToken).approve(address(uniswapV2Router), bAmount);
           (uint256 amountA , uint256 amountB ,uint256 amounts) = uniswapV2Router.addLiquidity(
                  aToken,
@@ -910,6 +912,7 @@ constructor(address _capl, address _usdc, address _pair) public {
      
     
       function swapTokens(address tokenIn, address tokenOut, uint256 tokenAmount, address sender, uint256 duration) internal returns(uint256 amount){
+        IERC20(tokenIn).approve(address(uniswapV2Router), 0);
         IERC20(tokenIn).approve(address(uniswapV2Router), tokenAmount);
         address[] memory path = new address[](2);
         path[0] =tokenIn;
