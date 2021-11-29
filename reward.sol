@@ -1455,9 +1455,9 @@ contract Reward is Ownable, ReentrancyGuard {
         address strat; // Strategy address that will auto compound want tokens
     }
 
-    address public CAPL = 0x5D6DeecC575535DB438847D968A798Ea611e54F8;
+    address public CAPL = 0xfcc35cf7e9dffd196932204beb6dcadde8cc9b76;
     address public USDC = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
-     address public addLiquidityAddress = 0x1F280Fa41be62bEc499CFe28ca4d58c328bBA1Ed;
+     address public addLiquidityAddress = 0x6b7833765822b00c6e2c7622dbdfc8cafe6d9404;
     address public fundSource; //source of CAPL tokens to pull from
 
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
@@ -1822,7 +1822,7 @@ contract Reward is Ownable, ReentrancyGuard {
 
 contract DarkPool is Ownable {
 
-    address public CAPL = 0x5D6DeecC575535DB438847D968A798Ea611e54F8;
+    address public CAPL = 0xfcc35cf7e9dffd196932204beb6dcadde8cc9b76;
 
     constructor(address _JPOW) public {
         IERC20(CAPL).approve(_JPOW, uint256(-1));
