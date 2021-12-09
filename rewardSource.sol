@@ -759,7 +759,7 @@ library SafeMath {
         }
     }
 }
-contract Reward is Ownable{
+contract reawrdSource is Ownable{
     using SafeMath for uint256;
     IERC20 public capl;
     address public rewardContract;
